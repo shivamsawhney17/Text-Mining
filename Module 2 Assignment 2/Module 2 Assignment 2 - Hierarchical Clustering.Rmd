@@ -1,0 +1,69 @@
+---
+title: "Module 2 Assignment 2 - Hierarchical Clustering"
+author: "Shivam Sawhney"
+date: "2024-03-09"
+output: html_document
+---
+
+```{r, Warnings=False}
+
+# Load the required libraries
+library(tm)  
+library(proxy)
+library(dendextend)  
+library(textTinyR) 
+
+```
+
+```{r}
+
+# Load the dataset
+data <- read.csv("Clean_scraped_data.csv")
+
+# Create a document term matrix (DTM)
+corpus <- Corpus(VectorSource(data$Combined_Text))
+dtm <- DocumentTermMatrix(corpus)
+
+# Convert DTM to TF-IDF matrix
+tfidf <- weightTfIdf(dtm)
+
+# Convert TF-IDF matrix to a dense matrix
+tfidf_dense <- as.matrix(tfidf)
+
+# Compute cosine similarity
+cosine_sim <- proxy::simil(tfidf_dense, method = "cosine")
+
+# Perform hierarchical clustering using cosine similarity
+hc <- hclust(as.dist(1 - cosine_sim), method = "complete")
+
+```
+
+```{r}
+
+# Visualize
+dend <- as.dendrogram(hc)
+plot(hc, labels = labels(dend))
+rect.hclust(hc, k=3, border = 2:5)
+
+```
+
+```{r}
+
+# Visualize
+dend <- as.dendrogram(hc)
+plot(hc, labels = labels(dend))
+rect.hclust(hc, k=7, border = 2:5)
+
+```
+
+```{r}
+
+# Visualize the dendrogram
+dend <- as.dendrogram(hc)
+
+plot(dend, main = "Dendrogram of Hierarchical Clustering", xlab = "Articles", ylab = "Height", edgePar = list(col = "darkred", lwd = 2),nodePar = list(pch = NA, col = "green", cex = 0.8))
+
+labels <- labels(dend)
+text(x = as.numeric(labels), y = par("usr")[3], labels = labels, srt = 90, adj = c(1,0.5), xpd = TRUE, cex = 0.8, col = "blue")
+
+```

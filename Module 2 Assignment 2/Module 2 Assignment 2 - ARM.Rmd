@@ -1,0 +1,202 @@
+---
+title: "Module 2 Assignment 2 - ARM"
+author: "Shivam Sawhney"
+date: "2024-03-10"
+output: html_document
+---
+
+```{r, warning=FALSE}
+
+# Load the required libraries
+library(arules)
+library(arulesViz)
+library(slam)
+library(tm)
+
+```
+
+```{r}
+
+# Load the dataset
+data <- read.csv("Clean_scraped_data.csv")
+
+```
+
+```{r, warning=FALSE}
+
+# Create a corpus from the 'text' column
+corpus <- Corpus(VectorSource(data$Combined_Text))
+
+# Preprocess the corpus
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, removeWords, stopwords("en"))
+corpus <- tm_map(corpus, stripWhitespace)
+
+# Create a document-term matrix
+dtm <- DocumentTermMatrix(corpus)
+
+# Convert the dtm to a matrix
+dtm_matrix <- as.matrix(dtm)
+
+# Convert the matrix to a data frame
+count_df_1 <- as.data.frame(dtm_matrix)
+
+# Add column names
+colnames(count_df_1) <- colnames(dtm)
+
+# Print the first few rows of the data frame
+head(count_df_1)
+
+```
+
+```{r}
+
+term_frequency <- colSums(count_df_1)
+
+# Sort the terms based on their frequency
+sorted_terms <- sort(term_frequency, decreasing = TRUE)
+
+# Get the top N features (e.g., top 10)
+top_features <- head(sorted_terms, 20)
+
+# Print the top features
+print(top_features)
+
+```
+
+```{r}
+
+# Creating dataframe for ARM
+
+col1 <- names(top_features)
+arm_data <- count_df_1[, c(col1)]
+
+```
+
+```{r}
+
+#write.csv(arm_data, "ARM_Sample_Data_Clean.csv", row.names = FALSE)
+
+```
+
+```{r, warning=FALSE}
+
+# Remove index column
+df=arm_data
+df = df[-c(1)]
+
+# Remove label from the dataframe
+label =  df[c(ncol(df))]
+df = df[-c(ncol(df))]
+
+# Convert into transactions
+trans <- as(as.matrix(df), "transactions")
+
+# Removing transactions having less than 2 items
+trans <- trans[rowSums(as(trans, "matrix")) > 1]
+
+```
+
+```{r}
+
+# Use apriori to get the RULES
+Frules = arules::apriori(trans, parameter = list(support=.22, confidence=.6, minlen=2))
+
+```
+
+```{r}
+
+arules::inspect(Frules)
+
+```
+
+
+```{r}
+SortedRules <- sort(Frules, by="confidence", decreasing=TRUE)
+summary(SortedRules)
+
+```
+
+```{r}
+
+# Visualize
+subrules <- head(sort(SortedRules, by="lift"),20)
+plot(subrules, color="purple")
+
+```
+
+```{r}
+library(htmltools)
+
+p <- plot(subrules, method="graph", engine="htmlwidget")
+p
+
+```
+
+```{r}
+
+save_html(p, file = "ARM-interactive-plot.html")
+
+```
+
+
+```{r}
+
+#  Visualize the results
+plot(Frules, method = "paracoord", col="darkgreen")
+
+```
+
+```{r}
+
+plot(Frules, method = "graph", col="darkgreen")
+
+```
+
+```{r}
+
+# Extract top rules
+detach(package:tm, unload=TRUE)
+library(arules)
+top_support <- head(sort(Frules, by = "support"), 15)
+inspect(top_support)
+
+```
+
+```{r}
+
+#  Visualize the results
+plot(top_support, method = "paracoord", col="darkorange")
+
+```
+
+```{r}
+
+# Top rules by confidence
+top_confidence <- head(sort(Frules, by = "confidence"), 15)
+inspect(top_confidence)
+
+```
+
+```{r}
+
+#  Visualize the results
+plot(top_confidence, method = "graph", col="darkblue")
+
+```
+
+```{r}
+
+# Top rules by lift
+top_lift <- head(sort(Frules, by = "lift"), 15)
+inspect(top_lift)
+
+```
+
+```{r}
+
+plot(top_lift, method = "graph", col = "brown")
+
+```
