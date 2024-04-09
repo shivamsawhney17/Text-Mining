@@ -1,0 +1,152 @@
+---
+title: "Module 3 Assignment 3 - Decision Trees"
+author: "Shivam Sawhney"
+date: "2024-04-08"
+output: html_document
+---
+
+```{r, warning=FALSE}
+
+# Load required library
+library(rpart)
+library(rpart.plot)
+
+```
+
+```{r}
+
+# Load the dataset
+df <- read.csv('NB_data.csv')
+
+# Split the dataset into features (Combined_Text) and target variable (Sentiment)
+X <- df$Combined_Text
+y <- df$Sentiment
+
+# Split the data into training and testing sets
+set.seed(42) # for reproducibility
+splitIndex <- createDataPartition(y, p = 0.8, list = FALSE)
+X_train <- X[splitIndex]
+X_test <- X[-splitIndex]
+y_train <- y[splitIndex]
+y_test <- y[-splitIndex]
+
+```
+
+```{r}
+
+#write.csv(X_train, "DT_Train_set.csv", row.names = FALSE)
+#write.csv(X_test, "DT_Test_set.csv", row.names = FALSE)
+#write.csv(y_train, "DT_Train_label.csv", row.names = FALSE)
+#write.csv(y_test, "DT_Test_label.csv", row.names = FALSE)
+
+```
+
+```{r}
+
+# Create a function to evaluate model performance
+evaluate_model <- function(model, X_test, y_test) {
+  # Predict
+  y_pred <- predict(model, X_test, type = "class")
+  
+  # Confusion matrix
+  conf_matrix <- table(y_pred, y_test)
+  print("Confusion Matrix:")
+  print(conf_matrix)
+  
+  # Accuracy
+  accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
+  print(paste("Accuracy:", round(accuracy, 3)))
+}
+
+```
+
+```{r}
+
+# Train Decision Tree models
+# 1. Default Decision Tree
+dt_default <- rpart(Sentiment ~ Combined_Text, data = df, method = "class")
+
+# 2. Decision Tree with Minimum Split Parameter
+dt_min_split <- rpart(Sentiment ~ Combined_Text, data = df, method = "class", control = rpart.control(minsplit = 20))
+
+# 3. Decision Tree with Maximum Depth Parameter
+dt_max_depth <- rpart(Sentiment ~ Combined_Text, data = df, method = "class", control = rpart.control(maxdepth = 3))
+
+```
+
+```{r}
+
+# Visualize Default Decision Tree
+rpart.plot(dt_default, box.palette = "GnBu", shadow.col = "gray", nn = TRUE, main = "Default Decision Tree")
+
+```
+
+```{r}
+
+# Visualize Decision Tree with Minimum Split Parameter
+rpart.plot(dt_min_split, box.palette = "GnBu", shadow.col = "gray", nn = TRUE, main = "Decision Tree with Min Split Parameter")
+
+```
+
+```{r}
+
+# Visualize Decision Tree with Maximum Depth Parameter
+rpart.plot(dt_max_depth, box.palette = "GnBu", shadow.col = "gray", nn = TRUE, main = "Decision Tree with Max Depth Parameter")
+
+```
+
+```{r}
+
+# Convert 'Sentiment' to a factor variable
+df$Sentiment <- as.factor(df$Sentiment)
+
+# Fit the Decision Tree model
+dt_model <- rpart(Sentiment ~ Title + Description + Link + Combined_Text, data = df, method = "class")
+
+# Visualize the Decision Tree
+rpart.plot(dt_model, box.palette = "GnBu", shadow.col = "gray", nn = TRUE)
+
+
+```
+
+```{r}
+
+# 1. Default Decision Tree
+dt_model_default <- rpart(Sentiment ~ Title + Description + Link + Combined_Text, data = df, method = "class")
+
+# 2. Pruned Decision Tree
+dt_model_pruned <- rpart(Sentiment ~ Title + Description + Link + Combined_Text, data = df, method = "class", control = rpart.control(cp = 0.01))
+
+# 3. Limited Depth Decision Tree
+dt_model_depth_limited <- rpart(Sentiment ~ Title + Description + Link + Combined_Text, data = df, method = "class", control = rpart.control(maxdepth = 3))
+
+# 4. Different Splitting Criterion (Gini)
+dt_model_gini <- rpart(Sentiment ~ Title + Description + Link + Combined_Text, data = df, method = "class", parms = list(split = "gini"))
+
+```
+
+```{r}
+
+# Visualize Decision Trees
+rpart.plot(dt_model_default, box.palette = "GnBu", shadow.col = "gray", nn = TRUE, main = "Default Decision Tree")
+
+```
+
+```{r}
+
+rpart.plot(dt_model_pruned, box.palette = "GnBu", shadow.col = "gray", nn = TRUE, main = "Pruned Decision Tree")
+
+```
+
+```{r}
+
+rpart.plot(dt_model_depth_limited, box.palette = "GnBu", shadow.col = "gray", nn = TRUE, main = "Limited Depth Decision Tree")
+
+```
+
+```{r}
+
+rpart.plot(dt_model_gini, box.palette = "GnBu", shadow.col = "gray", nn = TRUE, main = "Gini Decision Tree")
+
+```
+

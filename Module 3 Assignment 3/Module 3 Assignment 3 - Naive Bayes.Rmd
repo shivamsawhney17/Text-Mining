@@ -1,0 +1,142 @@
+---
+title: "Module 3 Assignment 3 - Naive Bayes"
+author: "Shivam Sawhney"
+date: "2024-04-08"
+output: html_document
+---
+
+```{r, warning=FALSE}
+
+# Load required libraries
+library(tm)
+library(caret)
+library(e1071)
+library(ggplot2)
+library(wordcloud)
+library(ROCR)
+
+```
+
+```{r}
+
+# Load the dataset
+df <- read.csv('NB_data.csv')
+
+# Split the dataset into features (Combined_Text) and target variable (Sentiment)
+X <- df$Combined_Text
+y <- df$Sentiment
+
+# Split the data into training and testing sets
+set.seed(42) # for reproducibility
+splitIndex <- createDataPartition(y, p = 0.8, list = FALSE)
+X_train <- X[splitIndex]
+X_test <- X[-splitIndex]
+y_train <- y[splitIndex]
+y_test <- y[-splitIndex]
+
+```
+
+```{r}
+
+#write.csv(X_train, "NB_Train_set.csv", row.names = FALSE)
+#write.csv(X_test, "NB_Test_set.csv", row.names = FALSE)
+#write.csv(y_train, "NB_Train_label.csv", row.names = FALSE)
+#write.csv(y_test, "NB_Test_label.csv", row.names = FALSE)
+
+```
+
+
+```{r}
+
+# Preprocess text data
+corpus <- Corpus(VectorSource(X_train))
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, removeWords, stopwords("en"))
+corpus <- tm_map(corpus, stripWhitespace)
+dtm <- DocumentTermMatrix(corpus)
+
+# Vectorize the text data using TF-IDF
+X_train_tfidf <- weightTfIdf(dtm)
+
+# Train a Naive Bayes classifier
+nb_classifier <- naiveBayes(as.matrix(X_train_tfidf), y_train)
+
+```
+
+```{r}
+
+# Preprocess and vectorize test data
+test_corpus <- Corpus(VectorSource(X_test))
+test_corpus <- tm_map(test_corpus, content_transformer(tolower))
+test_corpus <- tm_map(test_corpus, removePunctuation)
+test_corpus <- tm_map(test_corpus, removeNumbers)
+test_corpus <- tm_map(test_corpus, removeWords, stopwords("en"))
+test_corpus <- tm_map(test_corpus, stripWhitespace)
+test_dtm <- DocumentTermMatrix(test_corpus, control = list(dictionary = Terms(dtm)))
+X_test_tfidf <- weightTfIdf(test_dtm)
+
+# Predict the sentiment on the testing set
+y_pred <- predict(nb_classifier, newdata = as.matrix(X_test_tfidf))
+
+```
+
+```{r}
+
+# Evaluate the model
+conf_matrix <- table(y_test, y_pred)
+print(conf_matrix)
+print(paste("Accuracy:", sum(diag(conf_matrix)) / sum(conf_matrix)))
+
+```
+
+```{r}
+
+# Visualize the confusion matrix
+conf_matrix_df <- as.data.frame(conf_matrix)
+names(conf_matrix_df) <- c("Actual", "Predicted", "Freq")
+ggplot(data = conf_matrix_df, aes(x = Actual, y = Predicted, fill = Freq)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  geom_text(aes(label = Freq), vjust = 1) +
+  labs(title = "Confusion Matrix", x = "Actual", y = "Predicted") +
+  theme_minimal()
+
+
+```
+
+```{r}
+
+# Bar plot of class distribution
+class_distribution <- table(y)
+barplot(class_distribution, main = "Class Distribution", xlab = "Sentiment", ylab = "Frequency", col = "skyblue")
+
+# Bar plot of predicted sentiment
+predicted_distribution <- table(y_pred)
+barplot(predicted_distribution, main = "Predicted Sentiment Distribution", xlab = "Sentiment", ylab = "Frequency", col = "lightgreen")
+
+
+```
+
+```{r}
+
+# Convert confusion matrix to data frame
+conf_matrix_df <- as.data.frame.matrix(conf_matrix)
+
+# Add row names as a column
+conf_matrix_df$Actual <- rownames(conf_matrix_df)
+
+# Reshape the data for plotting
+conf_matrix_df_long <- reshape2::melt(conf_matrix_df, id.vars = "Actual")
+
+# Plot heatmap of confusion matrix
+ggplot(data = conf_matrix_df_long, aes(x = Actual, y = variable, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "darkred") +
+  geom_text(aes(label = value), vjust = 1) +
+  labs(title = "Confusion Matrix", x = "Actual", y = "Predicted") +
+  theme_minimal()
+
+```
+
